@@ -48,10 +48,12 @@ jobs:
       - name: Fail if a real-looking secret is committed
         run: |
           # Placeholders (YOUR_*, PLACEHOLDER_*, example, xxxx, fake DID 9000000000) are allowed.
+          # Exclude .github (this guard's own regex contains example key prefixes) and .git.
           HITS=$(grep -rnE \
             'sk-[A-Za-z0-9]{20}|sk-proj-|gho_[A-Za-z0-9]{30}|ghp_[A-Za-z0-9]{30}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|[0-9]{8,10}:AA[A-Za-z0-9_-]{30}|eyJ[A-Za-z0-9_-]{30}\.[A-Za-z0-9_-]{10}' \
             --include='*.py' --include='*.md' --include='*.json' --include='*.yml' --include='*.yaml' \
-            --include='*.example' --include='*.service' --include='*.sh' . \
+            --include='*.example' --include='*.service' --include='*.sh' \
+            --exclude-dir='.github' --exclude-dir='.git' . \
             | grep -viE 'your_|placeholder|example|xxxx' || true)
           if [ -n "$HITS" ]; then
             echo "::error::Possible secret committed:"; echo "$HITS"; exit 1
