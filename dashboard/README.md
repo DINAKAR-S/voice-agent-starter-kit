@@ -1,25 +1,40 @@
 # dashboard — static call review UI
 
-A zero-dependency HTML dashboard for reviewing Maya's calls: per-stage latency
-(colour-coded), auto-flag chips, expandable transcripts, and inline audio when a
-recording exists. It is regenerated from files on disk — no server, no framework.
+A zero-dependency HTML dashboard for reviewing Maya's calls: a summary bar
+(calls / minutes / cost / avg-per-min), then one card per call with an AI
+summary, a per-provider cost breakdown (Vobiz / Sarvam / GPT), an inline audio
+player + download, per-stage latency (colour-coded), auto-flag chips, and the
+full transcript. Regenerated from files on disk — no server, no framework.
 
 ## See it in 5 seconds
 
 ```bash
 python build_dashboard.py --demo
-# open dashboard.html in a browser
+# open dashboard.html in a browser — 3 sample calls, with playable sample audio
 ```
 
-`--demo` renders one sample card from inline fake data so you know what "good"
-looks like before you have real calls.
+`--demo` renders three sample calls (a clean one, a stretched one, and a flagged
+one) so you know what "good" and "bad" look like before you have real calls. The
+tiny sample `.wav` files in `recordings/` ship with the repo so the player works.
 
 ## Real data
 
-- Drop one JSONL file per call in `transcripts/` (the agent writes these — one
-  `{"role":..., "text":..., "latency_ms":{...}}` object per line, optional
-  `{"type":"meta",...}` header line).
-- Put recordings as `recordings/<call_id>.mp3` (the recording handler does this).
+- Drop one JSONL file per call in `transcripts/`. The first line is an optional
+  `{"type":"meta",...}` header; every other line is a turn:
+
+  ```json
+  {"type":"meta","call_id":"maya-2201","phone":"+91 90000 00001","direction":"INBOUND",
+   "language":"hi","started_at":"21 Jul 2026, 04:21 PM IST","duration_min":1.2,
+   "summary":"Caller booked a Saturday site visit for a 2 BHK.",
+   "cost":{"total":3.12,"per_min":2.60,"vobiz":0.40,"sarvam":1.90,"gpt":0.30}}
+  {"role":"user","text":"..."}
+  {"role":"assistant","text":"...","latency_ms":{"eou":150,"stt":95,"llm":560,"tts":330}}
+  ```
+
+  Every `meta` field is optional — the dashboard degrades gracefully. `summary`
+  comes from your n8n `transcript.ready` step; `cost` from `analyse_call`.
+- Put recordings as `recordings/<call_id>.mp3` (or `.wav`) — the recording
+  handler does this.
 
 ```bash
 python build_dashboard.py            # reads ./transcripts + ./recordings → dashboard.html
