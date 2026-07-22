@@ -1,0 +1,206 @@
+{
+  "name": "voice-events (Maya / Acme Realty)",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "voice-events",
+        "responseMode": "onReceived",
+        "responseCode": 200,
+        "options": {}
+      },
+      "id": "11111111-1111-1111-1111-111111111111",
+      "name": "Webhook: voice-events",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [-620, 300],
+      "webhookId": "voice-events"
+    },
+    {
+      "parameters": {
+        "functionCode": "// ======================================================================\n// DISABLED STUB — enable this before production!\n// Verify the HMAC signature Vobiz/your emitter sends so nobody can POST\n// fake call events to your public webhook.\n//\n// 1. Enable this node (right-click → Enable).\n// 2. Set REC/WEBHOOK secret as an n8n env var (e.g. $env.VOICE_EVENTS_SECRET).\n// 3. Compare the computed HMAC to the incoming signature header.\n// ======================================================================\nconst crypto = require('crypto');\nconst secret = $env.VOICE_EVENTS_SECRET || '';\nconst sig = $json.headers && $json.headers['x-signature'];\nconst raw = JSON.stringify($json.body || {});\nconst expected = crypto.createHmac('sha256', secret).update(raw).digest('hex');\nif (!secret || sig !== expected) {\n  throw new Error('Invalid HMAC signature — rejecting event');\n}\nreturn items;"
+      },
+      "id": "22222222-2222-2222-2222-222222222222",
+      "name": "Verify HMAC (ENABLE ME)",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [-420, 300],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.body.event }}",
+        "rules": {
+          "rules": [
+            { "value2": "call.started", "output": 0 },
+            { "value2": "call.completed", "output": 1 },
+            { "value2": "transcript.ready", "output": 2 }
+          ]
+        },
+        "fallbackOutput": 3
+      },
+      "id": "33333333-3333-3333-3333-333333333333",
+      "name": "Switch on event",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [-200, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=YOUR_SUPABASE_URL/rest/v1/calls",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Prefer", "value": "resolution=merge-duplicates,return=minimal" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ call_id: $json.body.call_id, did: $json.body.did, caller: $json.body.caller, event: $json.body.event, language: $json.body.language, started_at: $json.body.started_at, ended_at: $json.body.ended_at, duration_sec: $json.body.duration_sec }) }}",
+        "options": {}
+      },
+      "id": "44444444-4444-4444-4444-444444444444",
+      "name": "Supabase upsert calls",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [180, 160],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER_SUPABASE_CRED",
+          "name": "Supabase service key (apikey + Bearer)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-4o-mini', temperature: 0, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: 'Extract site-visit lead fields from the call transcript. Reply with STRICT JSON only, keys: name (string), budget (string), area (string), visit_date (string, ISO date or empty). Empty string if unknown. No prose.' }, { role: 'user', content: $json.body.transcript } ] }) }}",
+        "options": {}
+      },
+      "id": "55555555-5555-5555-5555-555555555555",
+      "name": "Extract fields (gpt-4o-mini)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [180, 460],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER_OPENAI_CRED",
+          "name": "OpenAI Bearer key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pull the strict-JSON object back out of the OpenAI response.\nconst raw = $json.choices[0].message.content;\nconst fields = JSON.parse(raw);\nfields.call_id = $('Switch on event').item.json.body.call_id;\nfields.booked = Boolean(fields.visit_date && fields.visit_date.trim());\nreturn [{ json: fields }];"
+      },
+      "id": "66666666-6666-6666-6666-666666666666",
+      "name": "Parse extraction",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 460]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=YOUR_SUPABASE_URL/rest/v1/site_visits",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Prefer", "value": "return=minimal" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ call_id: $json.call_id, name: $json.name, budget: $json.budget, area: $json.area, visit_date: $json.visit_date, booked: $json.booked }) }}",
+        "options": {}
+      },
+      "id": "77777777-7777-7777-7777-777777777777",
+      "name": "Supabase insert site_visits",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [620, 460],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER_SUPABASE_CRED",
+          "name": "Supabase service key (apikey + Bearer)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            { "value1": "={{ $('Parse extraction').item.json.booked }}", "value2": true }
+          ]
+        }
+      },
+      "id": "88888888-8888-8888-8888-888888888888",
+      "name": "IF booked",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [840, 460]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ '🏠 New site visit booked!\\nName: ' + $('Parse extraction').item.json.name + '\\nArea: ' + $('Parse extraction').item.json.area + '\\nBudget: ' + $('Parse extraction').item.json.budget + '\\nDate: ' + $('Parse extraction').item.json.visit_date }}",
+        "additionalFields": {}
+      },
+      "id": "99999999-9999-9999-9999-999999999999",
+      "name": "Telegram: notify owner",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1060, 380],
+      "credentials": {
+        "telegramApi": {
+          "id": "PLACEHOLDER_TELEGRAM_CRED",
+          "name": "Telegram bot (Maya alerts)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook: voice-events": {
+      "main": [[{ "node": "Verify HMAC (ENABLE ME)", "type": "main", "index": 0 }]]
+    },
+    "Verify HMAC (ENABLE ME)": {
+      "main": [[{ "node": "Switch on event", "type": "main", "index": 0 }]]
+    },
+    "Switch on event": {
+      "main": [
+        [{ "node": "Supabase upsert calls", "type": "main", "index": 0 }],
+        [{ "node": "Supabase upsert calls", "type": "main", "index": 0 }],
+        [{ "node": "Extract fields (gpt-4o-mini)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract fields (gpt-4o-mini)": {
+      "main": [[{ "node": "Parse extraction", "type": "main", "index": 0 }]]
+    },
+    "Parse extraction": {
+      "main": [[{ "node": "Supabase insert site_visits", "type": "main", "index": 0 }]]
+    },
+    "Supabase insert site_visits": {
+      "main": [[{ "node": "IF booked", "type": "main", "index": 0 }]]
+    },
+    "IF booked": {
+      "main": [[{ "node": "Telegram: notify owner", "type": "main", "index": 0 }], []]
+    }
+  }
+}

@@ -1,0 +1,60 @@
+# ==============================================================================
+# Self-hosted LiveKit media stack (Option B — the DIY alternative to LiveKit Cloud)
+# ------------------------------------------------------------------------------
+# Use this ONLY if you are not using LiveKit Cloud. It runs the media server,
+# the SIP bridge, and the Redis they coordinate through, all on one VPS.
+#
+#   docker compose -f docker-compose.livekit.yml up -d
+#
+# Why network_mode: host?
+#   LiveKit's RTC and SIP/RTP use large, dynamic UDP port ranges. Docker's
+#   userland NAT proxy chokes on thousands of UDP ports and adds latency, so
+#   the official guidance is to run these containers on the host network.
+#   Note: on host networking the `ports:` key is ignored — you MUST open the
+#   ranges below in your firewall (see vps_setup.sh) instead.
+#
+# Keys: never inline real keys here. livekit-server reads them from the mounted
+#       ./livekit.yaml, which itself references your real values (git-ignored).
+# ==============================================================================
+
+services:
+  # --- Coordination / state --------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    network_mode: host
+    command: redis-server --bind 127.0.0.1 --port 6379
+    # Redis stays bound to localhost — only livekit-server and sip talk to it.
+
+  # --- LiveKit media server (WebRTC SFU + realtime) --------------------------
+  livekit-server:
+    image: livekit/livekit-server:latest
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      - redis
+    command: --config /etc/livekit.yaml
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro   # copy livekit.yaml.example → livekit.yaml
+    # Ports this service uses (open in the firewall, NOT published here):
+    #   7880/tcp   — signalling WebSocket. Keep bound to localhost / behind Traefik.
+    #   7881/tcp   — TCP fallback for WebRTC media (when UDP is blocked).
+    #   50000-60000/udp — primary WebRTC media (one port per track).
+
+  # --- SIP bridge (turns inbound SIP calls into LiveKit rooms) ---------------
+  sip:
+    image: livekit/sip:latest
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      - redis
+      - livekit-server
+    environment:
+      # sip reads the shared Redis + LiveKit keys from its own config file.
+      SIP_CONFIG_BODY: ""   # unused; we mount a file instead (below)
+    command: --config /etc/sip.yaml
+    volumes:
+      - ./sip.yaml:/etc/sip.yaml:ro          # see sip.yaml.example (create alongside)
+    # Ports this service uses (open in the firewall, NOT published here):
+    #   5060/udp        — SIP signalling (where Vobiz sends the INVITE).
+    #   10000-20000/udp — RTP media (the actual call audio).

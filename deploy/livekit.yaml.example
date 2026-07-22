@@ -1,0 +1,53 @@
+# ==============================================================================
+# livekit.yaml — self-hosted LiveKit server config (Option B)
+# ------------------------------------------------------------------------------
+# Copy to livekit.yaml (git-ignored) and fill in real keys:
+#     cp livekit.yaml.example livekit.yaml
+# Mounted read-only into the livekit-server container by
+# docker-compose.livekit.yml.
+# ==============================================================================
+
+# --- Signalling ---------------------------------------------------------------
+# The WebSocket clients/agents connect to. Keep it on localhost and put Traefik
+# (or nothing — the agent runs on the same box) in front. Do NOT expose 7880
+# to the public internet unauthenticated.
+port: 7880
+bind_addresses:
+  - 127.0.0.1
+
+# --- WebRTC media ports -------------------------------------------------------
+# These carry the actual audio. They must be reachable, so open them in the
+# firewall (vps_setup.sh does this). udp_port range is one port per media track.
+rtc:
+  tcp_port: 7881               # TCP fallback when a caller's network blocks UDP
+  port_range_start: 50000      # }
+  port_range_end: 60000        # } 50000-60000/udp — primary media
+  use_external_ip: true        # set true on a cloud VPS so ICE advertises the public IP
+
+# --- Redis --------------------------------------------------------------------
+# Shared state between livekit-server and the sip bridge. Localhost only.
+redis:
+  address: 127.0.0.1:6379
+
+# --- API keys -----------------------------------------------------------------
+# Map of api_key: api_secret. Generate a strong secret:
+#     docker run --rm livekit/livekit-server generate-keys
+# These MUST match LIVEKIT_API_KEY / LIVEKIT_API_SECRET in your .env.
+keys:
+  YOUR_LIVEKIT_API_KEY: YOUR_LIVEKIT_API_SECRET
+
+# --- SIP ----------------------------------------------------------------------
+# The livekit/sip bridge uses its OWN config file (sip.yaml), not this one.
+# Create sip.yaml next to this file with the block below, then mount it via
+# docker-compose.livekit.yml. Shown here so the whole picture lives in one place.
+#
+# # sip.yaml ------------------------------------------------------------------
+# api_key: YOUR_LIVEKIT_API_KEY          # same key pair as above
+# api_secret: YOUR_LIVEKIT_API_SECRET
+# ws_url: ws://127.0.0.1:7880            # talk to livekit-server locally
+# redis:
+#   address: 127.0.0.1:6379
+# sip_port: 5060                          # 5060/udp — where Vobiz sends the INVITE
+# rtp_port: 10000-20000                   # 10000-20000/udp — SIP call audio (RTP)
+# use_external_ip: true
+# ---------------------------------------------------------------------------

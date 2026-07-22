@@ -1,0 +1,31 @@
+# --- Python ---
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# --- Secrets & config ---
+.env
+*.env
+!.env.example
+
+# --- Runtime artifacts (never commit call data) ---
+recordings/
+transcripts/
+*.log
+*.jsonl
+
+# --- Generated dashboard output ---
+dashboard/output/
+dashboard/*.html
+!dashboard/template.html
+
+# --- OS / editor cruft ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

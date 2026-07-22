@@ -1,0 +1,21 @@
+# voice-agent-starter-kit -- Python dependencies for the agent worker.
+# Pinned loosely (>=) so you get fixes; pin exact versions before you deploy.
+
+# LiveKit Agents runtime (v1.x owns the audio loop).
+livekit-agents>=1.0.0
+
+# Pipeline plugins.
+livekit-plugins-sarvam        # Sarvam Saaras STT + Bulbul TTS (Indian languages)
+livekit-plugins-silero        # Silero VAD (end-of-utterance detection)
+livekit-plugins-openai        # OpenAI gpt-4.1-mini LLM
+
+# LiveKit server/SIP API client (dispatch rules, SIP transfer, room admin).
+livekit-api
+
+# OpenAI SDK (used by the openai plugin).
+openai>=1.30
+
+# Config, HTTP, and TLS certs.
+python-dotenv
+httpx
+certifi

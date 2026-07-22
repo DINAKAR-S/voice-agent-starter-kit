@@ -1,0 +1,43 @@
+# ==============================================================================
+# systemd unit for the voice-agent worker.
+# ------------------------------------------------------------------------------
+# Install:
+#     sudo cp voice-agent.service /etc/systemd/system/voice-agent.service
+#     sudo systemctl daemon-reload
+#     sudo systemctl enable --now voice-agent
+# Follow logs:
+#     journalctl -u voice-agent -f
+# ==============================================================================
+
+[Unit]
+Description=voice-agent — Maya inbound phone voice agent (LiveKit worker)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/voice-agent
+EnvironmentFile=/opt/voice-agent/.env
+# `start` runs the worker in registration mode; each inbound SIP call spawns a job.
+ExecStart=/opt/voice-agent/.venv/bin/python /opt/voice-agent/agent.py start
+Restart=always
+RestartSec=3
+
+# --- Logging: everything to the journal (journalctl -u voice-agent) ----------
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=voice-agent
+
+# --- Hardening ---------------------------------------------------------------
+# The worker only needs to read /opt/voice-agent and write recordings there.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+# strict makes the whole FS read-only; allow just the recordings dir to be written.
+ReadWritePaths=/opt/voice-agent/recordings
+# Cap memory so a leak can't take the whole VPS (and n8n/Traefik) down.
+MemoryMax=2G
+
+[Install]
+WantedBy=multi-user.target

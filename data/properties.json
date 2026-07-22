@@ -1,0 +1,82 @@
+[
+  {
+    "id": "AC-201",
+    "title": "Acme Emerald Heights",
+    "bhk": 2,
+    "price_inr": 4800000,
+    "area": "Whitefield",
+    "city": "Bengaluru",
+    "amenities": ["gym", "clubhouse", "covered parking", "24x7 security"],
+    "status": "available"
+  },
+  {
+    "id": "AC-202",
+    "title": "Acme Emerald Heights",
+    "bhk": 3,
+    "price_inr": 7200000,
+    "area": "Whitefield",
+    "city": "Bengaluru",
+    "amenities": ["gym", "swimming pool", "clubhouse", "two covered parkings"],
+    "status": "available"
+  },
+  {
+    "id": "AC-305",
+    "title": "Acme Riverside Residency",
+    "bhk": 2,
+    "price_inr": 5500000,
+    "area": "Kondapur",
+    "city": "Hyderabad",
+    "amenities": ["gym", "children's play area", "power backup", "covered parking"],
+    "status": "available"
+  },
+  {
+    "id": "AC-306",
+    "title": "Acme Riverside Residency",
+    "bhk": 3,
+    "price_inr": 9500000,
+    "area": "Gachibowli",
+    "city": "Hyderabad",
+    "amenities": ["swimming pool", "gym", "clubhouse", "landscaped garden"],
+    "status": "on-hold"
+  },
+  {
+    "id": "AC-410",
+    "title": "Acme Green Meadows Plots",
+    "bhk": 0,
+    "price_inr": 3500000,
+    "area": "Sarjapur Road",
+    "city": "Bengaluru",
+    "amenities": ["gated layout", "paved roads", "underground drainage", "park"],
+    "status": "available"
+  },
+  {
+    "id": "AC-511",
+    "title": "Acme Sunrise Towers",
+    "bhk": 2,
+    "price_inr": 6200000,
+    "area": "Baner",
+    "city": "Pune",
+    "amenities": ["gym", "rooftop deck", "covered parking", "rainwater harvesting"],
+    "status": "available"
+  },
+  {
+    "id": "AC-512",
+    "title": "Acme Sunrise Towers",
+    "bhk": 3,
+    "price_inr": 8800000,
+    "area": "Hinjewadi",
+    "city": "Pune",
+    "amenities": ["swimming pool", "gym", "clubhouse", "two covered parkings"],
+    "status": "sold"
+  },
+  {
+    "id": "AC-620",
+    "title": "Acme Bayview Enclave",
+    "bhk": 2,
+    "price_inr": 4200000,
+    "area": "Perungudi",
+    "city": "Chennai",
+    "amenities": ["gym", "power backup", "covered parking", "24x7 security"],
+    "status": "available"
+  }
+]
