@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Self-checks (no API keys needed)
+        run: |
+          python prompts.py
+          python tools.py
+          python deploy/create_sip_trunk.py --self-check
+          python n8n/recording_handler.py --self-check
+          python dashboard/build_dashboard.py --self-check
+          python dashboard/build_dashboard.py --demo
+
+      - name: Validate JSON / YAML
+        run: |
+          python -c "import json; json.load(open('n8n/workflow.voice-events.json')); print('workflow.voice-events.json OK')"
+          python - <<'PY'
+          import glob, yaml
+          for f in glob.glob('**/*.yml', recursive=True) + glob.glob('**/*.yaml*', recursive=True):
+              list(yaml.safe_load_all(open(f)))
+              print(f, "OK")
+          PY
+
+      - name: Byte-compile all Python
+        run: python -m compileall -q agent.py prompts.py tools.py config.py deploy n8n dashboard
+
+  secret-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail if a real-looking secret is committed
+        run: |
+          # Placeholders (YOUR_*, PLACEHOLDER_*, example, xxxx, fake DID 9000000000) are allowed.
+          HITS=$(grep -rnE \
+            'sk-[A-Za-z0-9]{20}|sk-proj-|gho_[A-Za-z0-9]{30}|ghp_[A-Za-z0-9]{30}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|[0-9]{8,10}:AA[A-Za-z0-9_-]{30}|eyJ[A-Za-z0-9_-]{30}\.[A-Za-z0-9_-]{10}' \
+            --include='*.py' --include='*.md' --include='*.json' --include='*.yml' --include='*.yaml' \
+            --include='*.example' --include='*.service' --include='*.sh' . \
+            | grep -viE 'your_|placeholder|example|xxxx' || true)
+          if [ -n "$HITS" ]; then
+            echo "::error::Possible secret committed:"; echo "$HITS"; exit 1
+          fi
+          echo "secret-guard: clean"

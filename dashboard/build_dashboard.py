@@ -183,19 +183,65 @@ def build(transcripts_dir: Path, recordings_dir: Path, out: Path) -> None:
 
 # ---- demo + self-check -------------------------------------------------------
 
-_DEMO_CALL = {
-    "meta": {"call_id": "call-demo", "did": "09000000000", "language": "hi",
-             "started_at": "2026-07-22T10:11:12"},
-    "turns": [
-        {"role": "user", "text": "Namaste, do you have 2 BHK flats?"},
-        {"role": "assistant", "text": "Namaste! Haan, humare paas 2 BHK flats hain in Whitefield, "
-         "45 se 60 lakh ke beech. Aapka budget kya hai?",
-         "latency_ms": {"eou": 190, "stt": 130, "llm": 1120, "tts": 610}},
-        {"role": "user", "text": "Around 50 lakh. Can I visit on Saturday?"},
-        {"role": "assistant", "text": "Bilkul! Saturday 11 baje site visit book kar diya. "
-         "Aapka naam bata dijiye?", "latency_ms": {"eou": 210, "stt": 150, "llm": 680, "tts": 330}},
-    ],
-}
+# Four demo calls chosen to show the whole range: all-green, stretched-amber,
+# over-budget-red with flags, and a healthy-but-verbose one.
+_DEMO_CALLS = [
+    {  # 1) healthy call — every stage green, no flags
+        "meta": {"call_id": "call-1042", "did": "09000000000", "language": "hi",
+                 "started_at": "2026-07-22T09:58:04"},
+        "turns": [
+            {"role": "user", "text": "Namaste, 2 BHK flat chahiye Whitefield mein."},
+            {"role": "assistant", "text": "Namaste! Whitefield mein 2 BHK 45 se 60 lakh ke beech "
+             "hain. Aapka budget kya hai?", "latency_ms": {"eou": 150, "stt": 95, "llm": 560, "tts": 330}},
+            {"role": "user", "text": "50 lakh tak. Saturday visit ho sakta hai?"},
+            {"role": "assistant", "text": "Bilkul, Saturday 11 baje site visit book kar diya. Naam?",
+             "latency_ms": {"eou": 170, "stt": 110, "llm": 590, "tts": 340}},
+        ],
+    },
+    {  # 2) stretched — amber LLM/TTS, still no hard flags
+        "meta": {"call_id": "call-1043", "did": "09000000000", "language": "ta",
+                 "started_at": "2026-07-22T10:22:41"},
+        "turns": [
+            {"role": "user", "text": "Vanakkam, 3 BHK plot iruka?"},
+            {"role": "assistant", "text": "Vanakkam! 3 BHK flats iruku, plots-um iruku. Ungaloda "
+             "budget evvalavu?", "latency_ms": {"eou": 260, "stt": 210, "llm": 980, "tts": 560}},
+            {"role": "user", "text": "80 lakh. Chennai la enga iruku?"},
+            {"role": "assistant", "text": "OMR-la 3 BHK 78 lakh-ku iruku. Site visit venuma?",
+             "latency_ms": {"eou": 240, "stt": 190, "llm": 910, "tts": 520}},
+        ],
+    },
+    {  # 3) over budget + flags: LLM-SLOW, TTS-SLOW, EMPTY-REPLY, RECOVERY-LOOP
+        "meta": {"call_id": "call-1044", "did": "09000000000", "language": "en",
+                 "started_at": "2026-07-22T11:03:19"},
+        "turns": [
+            {"role": "user", "text": "Hi, I'm looking for a villa."},
+            {"role": "assistant", "text": "Sorry, I didn't catch that — could you repeat?",
+             "latency_ms": {"eou": 320, "stt": 280, "llm": 1410, "tts": 720}},
+            {"role": "user", "text": "A villa. Do you have any?"},
+            {"role": "assistant", "text": "Sorry, I didn't catch that — could you repeat?",
+             "latency_ms": {"eou": 300, "stt": 260, "llm": 1360, "tts": 690}},
+            {"role": "user", "text": "V-I-L-L-A."},
+            {"role": "assistant", "text": "Sorry, I didn't catch that — could you repeat?",
+             "latency_ms": {"eou": 310, "stt": 270, "llm": 1290, "tts": 700}},
+            {"role": "user", "text": "Villa!"},
+            {"role": "assistant", "text": "", "latency_ms": {"eou": 290, "stt": 250, "llm": 1180, "tts": 0}},
+        ],
+    },
+    {  # 4) healthy but VERBOSE (reply > 280 chars)
+        "meta": {"call_id": "call-1045", "did": "09000000000", "language": "hi",
+                 "started_at": "2026-07-22T11:40:55"},
+        "turns": [
+            {"role": "user", "text": "Amenities kya kya hain society mein?"},
+            {"role": "assistant", "text": "Society mein swimming pool, gym, clubhouse, children's "
+             "play area, 24x7 security, power backup, covered parking, indoor games, jogging track, "
+             "aur ek chhota garden bhi hai. Iske alawa paas mein school aur hospital dono hain, metro "
+             "station bhi sirf do kilometre door hai, toh family ke liye yeh location kaafi convenient "
+             "hai aur daily commute bhi bahut aasan ho jaata hai.",
+             "latency_ms": {"eou": 180, "stt": 120, "llm": 640, "tts": 480}},
+        ],
+    },
+]
+_DEMO_CALL = _DEMO_CALLS[2]  # the flagged one, used by the self-check
 
 
 def _self_check() -> None:
@@ -205,7 +251,9 @@ def _self_check() -> None:
     assert colour_for("tts", 400) == "green" and colour_for("tts", 900) == "red"
     assert colour_for("unknown", 10) == "grey"
     flags = compute_flags(_DEMO_CALL["turns"])
-    assert "LLM-SLOW>1s" in flags and "TTS-SLOW>0.5s" in flags, flags
+    for expected in ("LLM-SLOW>1s", "TTS-SLOW>0.5s", "EMPTY-REPLY", "RECOVERY-LOOP"):
+        assert expected in flags, f"missing {expected} in {flags}"
+    assert "VERBOSE" in compute_flags(_DEMO_CALLS[3]["turns"])
     print("self-check OK:", flags)
 
 
@@ -223,9 +271,9 @@ def main() -> None:
         return
     if args.demo:
         out = Path(args.out)
-        card = render_card(_DEMO_CALL, Path(args.recordings))
-        out.write_text(_PAGE.format(n=1, cards=card), encoding="utf-8")
-        print(f"Wrote {out} (demo). Open it in a browser.")
+        cards = "".join(render_card(c, Path(args.recordings)) for c in _DEMO_CALLS)
+        out.write_text(_PAGE.format(n=len(_DEMO_CALLS), cards=cards), encoding="utf-8")
+        print(f"Wrote {out} (demo, {len(_DEMO_CALLS)} calls). Open it in a browser.")
         return
     build(Path(args.transcripts), Path(args.recordings), Path(args.out))
 
