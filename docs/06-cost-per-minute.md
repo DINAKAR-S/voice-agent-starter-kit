@@ -1,9 +1,10 @@
-# 06 · Cost per minute — proving a multilingual voice agent runs under ₹4/min
+# 06 · Cost per minute — proving a multilingual voice agent runs under ₹5.5/min
 
 This page shows, line by line, what one minute of a live Maya call actually costs when you
 self-host the media path on a cheap Indian VPS. The headline: **a tuned cascade lands around
-₹3.2/minute — comfortably under ₹4/min** — *as long as you keep replies short* (that last clause
-matters; see the sensitivity note).
+₹3.2/minute, and even with real-world variance — longer replies, a premium voice, telephony
+swings — it stays comfortably under ₹5.5/min.** The ₹3.2 base case holds *as long as you keep
+replies short* (that clause matters; see the sensitivity note).
 
 > ⚠️ **Every number here is illustrative — verify current pricing before you quote a client.**
 > All figures were checked on **2026-07-22**. Vendors change prices, exchange rates move, and your
@@ -77,8 +78,9 @@ Each line shows the arithmetic, then the cost for one call-minute.
 | **VPS (amortized)** | ₹899/mo ÷ 3,000 call-min/mo | **₹0.30** |
 | **Total** | | **≈ ₹3.15 / min** |
 
-**≈ ₹3.15/minute — under ₹4/min with room to spare.** (Prompt caching on the repeated persona+grammar
-prefix, which we did *not* discount above, pulls it back toward ~₹2.8 in practice.)
+**≈ ₹3.15/minute in the tuned base case — and under ₹5.5/min even when real-world variance creeps in.**
+(Prompt caching on the repeated persona+grammar prefix, which we did *not* discount above, pulls the base
+case back toward ~₹2.8 in practice.)
 
 A quick sanity read of the shape: **TTS is the single biggest line (~₹1.35, ~43% of the total)** and
 it scales *linearly* with how much Maya talks. STT is next and is basically fixed. The LLM (~₹0.60
@@ -89,15 +91,15 @@ is short and written to speak few words.**
 
 ---
 
-## Sensitivity — what pushes it over ₹4
+## Sensitivity — what moves the number (and what pushes it over ₹5.5)
 
 Because TTS dominates and scales with Maya's word count, the budget lives or dies on **reply length**:
 
 - **Long replies (the killer).** If Maya hits `max_tokens = 140` on *every* turn — ~105 words/turn,
   ~315 words/min — TTS alone becomes 315 × 6 × ₹0.003 ≈ **₹5.7/min**, and the total blows past **₹7/min**.
   This is exactly why the grammar files enforce **"≤ 2 sentences per turn"** and **"don't blow
-  max_tokens"** as hard DON'Ts: **those rules are cost controls, not just style.** Under ₹4/min is only
-  true *with the ≤2-sentence discipline actually enforced.*
+  max_tokens"** as hard DON'Ts: **those rules are cost controls, not just style.** The ~₹3.2 base case
+  needs the ≤2-sentence discipline; let replies run long and you drift up toward — and past — ₹5.5/min.
 - **Premium / higher-quality TTS voice or Bulbul at a higher tier** → more ₹/char, higher TTS line.
 - **LiveKit Cloud instead of self-host.** Cloud has a generous free tier, but past it you pay per
   participant-minute for media — that adds a real per-minute line that self-hosting avoids.

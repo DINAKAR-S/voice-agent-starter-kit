@@ -223,7 +223,7 @@ voice-agent-starter-kit/
     ├── 03-vobiz-sip.md       ← Vobiz SIP trunk wiring + every gotcha
     ├── 04-latency.md         ← the ~700ms–1.2s numbers + tuning recipe
     ├── 05-add-a-client.md    ← clone Maya for your own business
-    └── 06-cost-per-minute.md ← proof it runs under ₹4/min (≈₹3.15)
+    └── 06-cost-per-minute.md ← proof it runs under ₹5.5/min (≈₹3.15 tuned base)
 ```
 
 ---
