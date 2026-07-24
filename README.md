@@ -1,5 +1,8 @@
 # 📞 voice-agent-starter-kit
 
+[![CI](https://github.com/DINAKAR-S/voice-agent-starter-kit/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DINAKAR-S/voice-agent-starter-kit/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 **A self-hosted, low-latency phone voice agent for Indian languages — that you can actually run on one cheap VPS.**
 
 This kit shows you how to build a real inbound phone assistant that a customer
